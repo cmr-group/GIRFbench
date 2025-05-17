@@ -9,6 +9,11 @@ revision 2
 [DEFINITIONS]
 AdcRasterTime 1e-07 
 BlockDurationRaster 1e-05 
+CameraAcqDuration 0.1 
+CameraAqDelay 0 
+CameraInterleaveTR 0.49 
+CameraNrDynamics 1080 
+CameraNrSyncDynamics 0 
 FOV 0.05 0.05 0.05 
 GradientRasterTime 1e-05 
 Name cam_girf_v1_10av 
@@ -40979,4 +40984,4 @@ num_samples 4251
 # It can be reproduced/verified with md5sum if the file trimmed to the position right above [SIGNATURE]
 # The new line character preceding [SIGNATURE] BELONGS to the signature (and needs to be stripped away for recalculating/verification)
 Type md5
-Hash 30917507c6d6fd5486f6e1f2b0e155dc
+Hash 78b655ce6020dd1c93f0274b2f60169b
