@@ -1,6 +1,7 @@
 import datetime
 
 import numpy as np
+import matplotlib.pyplot as plt
 import pypulseq as pp
 from pypulseq.opts import Opts
 
@@ -19,6 +20,7 @@ class PSeq_Params:
             allow rotations on the scanner, then just leave it to the default, and the
             intperretor will rotate for you.
             By default ('x', 'y', 'z')
+            
         rf_spoil : bool, optional
             Is rf spoiling being used, by default True
         """
@@ -44,6 +46,22 @@ class PSeq_Params:
 
         self.rf_spoil_idx = 0
         self.rf_spoil_phase = 0
+    
+    def increment_rf_spoiling(self):
+        """
+        Increment the rf spoiling phase.
+
+        rf_spoil_phase should then be used any time an RF or ADC even is played.
+
+        TODO
+        ----
+        * Add support for different style of rf spoiling (mainly random, or list based)
+
+        """
+        self.rf_spoil_idx += 1
+        self.rf_spoil_phase = (117 * np.pi / 180) * self.rf_spoil_idx * self.rf_spoil_idx / 2
+        self.rf_spoil_phase = self.rf_spoil_phase % (2 * np.pi)
+
 
 
 class PSeq_Base:
@@ -57,44 +75,12 @@ class PSeq_Base:
         self.seq = pp.Sequence(system=self.pparams.system)
         self.track_time = 0
 
-    def increment_rf_spoiling(self):
-        """
-        Increment the rf spoiling phase.
-
-        rf_spoil_phase should then be used any time an RF or ADC even is played.
-
-        TODO
-        ----
-        * Add support for different style of rf spoiling (mainly random, or list based)
-
-        """
-        self.pparams.rf_spoil_idx += 1
-        self.pparams.rf_spoil_phase = (117 * np.pi / 180) * self.pparams.rf_spoil_idx * self.pparams.rf_spoil_idx / 2
-        self.pparams.rf_spoil_phase = self.pparams.rf_spoil_phase % (2 * np.pi)
-
     def reinit_seq(self):
         """Reset the sequence."""
         self.pparams.rf_spoil_idx = 0
         self.pparams.rf_spoil_phase = 0
         self.track_time = 0
         self.seq = pp.Sequence(system=self.pparams.system)
-
-    def add_pseq_to_self(self, pseq_in, *args, **kwargs):
-        """Add a sequence element to this sequence.
-
-        Basically call add the pseq_in component to this current self.seq
-
-        Parameters
-        ----------
-        pseq : Pseq_Base derived
-            The sequence element we will add to this sequence
-
-        Returns
-        -------
-        float
-            Duration [seconds] of the added component.
-        """
-        return pseq_in.add_to_seq(self, *args, **kwargs)
 
     def add_delay(self, delay):
         """Add a simple delay to the sequence.
@@ -139,9 +125,19 @@ class PSeq_Base:
         for block in all_blocks:
             self.seq.add_block(*block)
 
-    def add_to_seq(self, pseq0, *args, **kwargs):
+    def __iadd__(self, other):
+        """Add a list of blocks to this sequence.
+        
+        TODO: This really needs some type of tpye checking.
         """
-        Add this sequence component to a parent sequence `pseq0`.
+        self.add_block_list(other)
+
+        return self
+
+
+    def add_block_list(self, all_blocks):
+        """
+        Add a list of block elements to this sequence.
 
         See each components build_blocks function for argument list.
 
@@ -150,23 +146,19 @@ class PSeq_Base:
         * Consider if the rf_spoil blanket application will be OK.  i.e. is there ever a
           case where some rf or adc elements should not have the same phase?  If so how
           can we handle it?  We can move it back to build_blocks like it used to be.
-        * I think I should move these back to individual classes so that the arguments can
-          be more easily determined for IDEs, right now people need to go find the right
-          build_blocks to learn arguments.  (We can still keep the build_blocks usage)
         """
-        all_blocks = self.build_blocks(*args, **kwargs)
         for block in all_blocks:
             # Set rf spoiling if needed to all rf and adc blocks
-            if pseq0.pparams.rf_spoil:
+            if self.pparams.rf_spoil:
                 for bb in block:
                     if bb.type in ['rf', 'adc']:
-                        bb.phase_offset = pseq0.pparams.rf_spoil_phase
+                        bb.phase_offset = self.pparams.rf_spoil_phase
             
             # Add block to sequence
-            pseq0.seq.add_block(*block)
+            self.seq.add_block(*block)
 
         total_dur = self.get_duration(all_blocks=all_blocks)
-        pseq0.track_time += total_dur
+        self.track_time += total_dur
 
         return total_dur
 
@@ -194,4 +186,34 @@ class PSeq_Base:
         else:
             print("Timing check failed. Error listing follows:")
             [print(e) for e in error_report]
+            
+    def quick_plot(self):
+        """Quick plot the sequence.
+        
+        This is a lot faster than seq.plot for testing, but does not color by block, and excludes the ADC.
+        """
+        wave_data, tfp_excitation, tfp_refocusing, t_adc, fp_adc = self.seq.waveforms_and_times(append_RF=True)
+
+        fig, axs = plt.subplots(4,1, sharex=True, figsize=(12,8))
+
+        i_ax = 3
+        axs[0].axhline(color = 'k', alpha=0.2, ls = ':')
+        axs[0].plot(wave_data[i_ax][0].real, wave_data[i_ax][1].real, lw=1)
+        axs[0].plot(wave_data[i_ax][0].real, wave_data[i_ax][1].imag, lw=1)
+        axs[0].set_ylabel('rf')
+
+        max_grad = max(np.max(np.abs(wave_data[0][1]/42.577478461e3)), 
+                    np.max(np.abs(wave_data[1][1]/42.577478461e3)), 
+                    np.max(np.abs(wave_data[2][1]/42.577478461e3)))
+
+        for i_ax in range(3):
+            axs[i_ax+1].axhline(color = 'k', alpha=0.2, ls = ':')
+            axs[i_ax+1].plot(wave_data[i_ax][0].real, wave_data[i_ax][1]/42.577478461e3, lw=1)
+            axs[i_ax+1].set_ylabel(f'G{i_ax} [mT/m]')
+            axs[i_ax+1].set_ylim(-1.1*max_grad,1.1*max_grad)
+
+        axs[3].set_xlabel('t [ms]')
+        for ax in axs.ravel():
+            ax.spines['right'].set_visible(False)
+            ax.spines['top'].set_visible(False)
 

@@ -18,7 +18,8 @@ class PSeq_SkopeTrigger(PSeq_Base):
         duration : float, optional
             Time in [seconds] for this whole block.  The time here is a little bigger than
             the inherent delay of the Skope system (~150-160us).  So this makes sure
-            nothing is happening when the system is switching from TX to RX.
+            nothing is happening when the system is switching from TX to RX. And any subsequent
+            gradients can start immediately if needed.
             By default 200e-6
         """
         super().__init__(pparams)
@@ -28,7 +29,7 @@ class PSeq_SkopeTrigger(PSeq_Base):
             channel='ext1',
             duration=self.pparams.system.grad_raster_time,
         )
-        self.pp_delay = pp.make_delay(self.duration)
+        self.pp_delay = pp.make_delay(self.duration - self.trig.duration)
 
     def build_blocks(self):
         """Build all blocks to add to sequence.

@@ -85,7 +85,7 @@ class PSeq_TestWave(PSeq_Base):
 
             if pp.calc_duration(self.adc) > self.total_duration:
                 print(
-                    'WARNING: ADC duration longer than total_duration, this is probbaly unintended',
+                    'WARNING: ADC duration longer than total_duration, this is probably unintended',
                 )
 
         self.duration_delay = pp.make_delay(self.total_duration)
