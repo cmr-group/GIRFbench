@@ -124,6 +124,7 @@ classdef PSeq_Excite_PE < PSeq_Base
             parser = inputParser;
             addParameter(parser, 'idx1', 1);
             addParameter(parser, 'idx2', 1);
+            addParameter(parser, 'seg_idx', -1);
             addParameter(parser, 'offset', 0);
 
             parse(parser, varargin{:});
@@ -141,11 +142,19 @@ classdef PSeq_Excite_PE < PSeq_Base
             % --- Slice select prewinder
             if obj.do_prewind
                 obj.gss_re.channel = obj.pparams.channels{3};
-                allblocks{end+1} = {obj.gss_re};
+                blocks = {obj.gss_re};
+                if (opt.seg_idx >= 0)
+                    blocks{end+1} = mr.makeLabel('SET', 'TRID', opt.seg_idx);
+                end
+                allblocks{end+1} = blocks;
             end
 
             % --- RF and slice select gradient
-            allblocks{end+1} = {obj.rfp, obj.gss};
+            blocks = {obj.rfp, obj.gss};
+            if ((opt.seg_idx >= 0) && ~obj.do_prewind)
+                blocks{end+1} = mr.makeLabel('SET', 'TRID', opt.seg_idx);
+            end
+            allblocks{end+1} = blocks;
 
             % --- Spatial encoding and slice select refocusing
             blocks = {};

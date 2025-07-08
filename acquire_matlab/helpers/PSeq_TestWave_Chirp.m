@@ -51,8 +51,8 @@ classdef PSeq_TestWave_Chirp < PSeq_TestWave
             obj.all_chirps{1} = get_chirp('dt', obj.pparams.sys.gradRasterTime, ...
                                           'gmax', obj.pparams.sys.maxGrad, ...
                                           'smax', obj.slew, ...
-                                          'max_k', -1, ...
-                                          'median_k', -1);
+                                          'max_k', 500, ...
+                                          'median_k', 250);
 
             obj.N_waves = numel(obj.all_chirps);
 
@@ -173,10 +173,13 @@ function chirp = get_chirp(varargin)
 
     end
 
+    chirp = [chirp, 0];
+
     slew_check = diff(chirp)./opt.dt;
     if max(abs(slew_check)) > opt.smax
         disp('ERROR: Chirp generation gave slew rate > smax.')
     end
+
 end
 
 function [min_m0, max_m0, median_m0] = get_m0(chirp, dt)

@@ -8,13 +8,10 @@ clc
 
 
 %%
-specs.MaxGrad = 32;
-specs.MaxSlew = 110;
+params = PSeq_Params('max_grad', 32, 'max_slew', 110, 'grad_raster', 4e-6);
 
 TR = 500e-3;
 N_av = 4;
-
-params = PSeq_Params(specs);
 
 pseq0 = PSeq_Base(params);
 
@@ -43,12 +40,14 @@ for i_av = 1:N_av
 for channels = {{'y', 'z', 'x'}, {'x', 'z', 'y'}, {'x', 'y', 'z'}}
 for polarity = [-1, 0, 1]
 for offset = all_offsets
- 
+    
+    seg_idx = polarity + 2;
+
     params.channels = channels{1};
     params.increment_rf_spoiling();
     
     pseq0.track_time = 0;
-    pseq0.add_block_list( pseq_excite.build_blocks('offset', offset) );
+    pseq0.add_block_list( pseq_excite.build_blocks('offset', offset, 'seg_idx', seg_idx) );
     pseq0.add_block_list( pseq_test.build_blocks('polarity', polarity) );
     pseq0.add_block_list( pseq_refocus.build_blocks('start_pol3', polarity) );
 
@@ -86,5 +85,5 @@ pseq0.seq.setDefinition('FOV', [320e-3 320e-3 FOVz]);
 pseq0.seq.setDefinition('Name', 'temp_GIRF');
 pseq0.seq.setDefinition('MaxAdcSegmentLength', pseq_test.adc_samples_per_segment);
 
-pseq0.seq.write('export/phantom_girf.seq');   % Output sequence for scanner
+pseq0.seq.write('export/phantom_girf_GE.seq');   % Output sequence for scanner
 fprintf('Done!\n');
