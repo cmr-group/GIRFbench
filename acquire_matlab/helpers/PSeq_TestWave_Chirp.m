@@ -1,5 +1,5 @@
 classdef PSeq_TestWave_Chirp < PSeq_TestWave
-    % Base class for GIRF measurement test waves.
+    % Chirp test waveforms for GIRF measurement
 
     % Supports thin slice and field camera measurements.  Derived classes should implement
     % prep_waves() to create the lists: all_test_waves, all_test_waves_neg, and
@@ -46,14 +46,9 @@ classdef PSeq_TestWave_Chirp < PSeq_TestWave
 
 
         function prep_waves(obj)
-            
-            obj.all_chirps = cell(1,1);
-            obj.all_chirps{1} = get_chirp('dt', obj.pparams.sys.gradRasterTime, ...
-                                          'gmax', obj.pparams.sys.maxGrad, ...
-                                          'smax', obj.slew, ...
-                                          'max_k', 500, ...
-                                          'median_k', 250);
 
+            obj.gen_all_chirps();
+            
             obj.N_waves = numel(obj.all_chirps);
 
             for i = 1:obj.N_waves
@@ -79,6 +74,27 @@ classdef PSeq_TestWave_Chirp < PSeq_TestWave
                 obj.all_test_waves_neg{i} = wave;
 
             end
+
+        end
+
+        function gen_all_chirps(obj)
+            obj.all_chirps = {};
+            
+            ii = 1;
+            for t_chirp = [20e-3, 40e-3]
+            for f2 = [5000, 15000, 25000]
+                obj.all_chirps{ii} = get_chirp('dt', obj.pparams.sys.gradRasterTime, ...
+                                          'gmax', obj.pparams.sys.maxGrad, ...
+                                          'smax', obj.slew, ...
+                                          't_chirp', t_chirp, ...
+                                          'f2', f2, ...
+                                          'max_k', 500, ...
+                                          'median_k', 250);
+                ii = ii + 1;
+            end
+            end
+
+            
 
         end
 
@@ -127,6 +143,8 @@ function chirp = get_chirp(varargin)
 
     parse(parser, varargin{:});
     opt = parser.Results;
+    
+    slew_reduce = 0.95;
 
     tt = 0:opt.dt:opt.t_chirp;
     ft = opt.f1 + (opt.f2 - opt.f1) .* tt ./ opt.t_chirp;
@@ -134,7 +152,7 @@ function chirp = get_chirp(varargin)
     gmax_vec = ones(1, numel(tt)) * opt.gmax;
 
     Gct = gmax_vec .* sin(2 .* pi .* (opt.f1 .* tt + (opt.f2 - opt.f1) .* tt.^2 ./ 2 ./ opt.t_chirp));
-    senv = 0.98 .* opt.smax ./ (2 .* pi .* gmax_vec .* ft + 1e-64);
+    senv = slew_reduce .* opt.smax ./ (2 .* pi .* gmax_vec .* ft + 1e-64);
     senv(senv>1) = 1;
     
     chirp = senv .* Gct;
@@ -162,7 +180,7 @@ function chirp = get_chirp(varargin)
 
         
         Gct = gmax_vec .* sin(2 .* pi .* (opt.f1 .* tt + (opt.f2 - opt.f1) .* tt.^2 ./ 2 ./ opt.t_chirp));
-        senv = 0.98 .* opt.smax ./ (2 .* pi .* gmax_vec .* ft + 1e-64);
+        senv = slew_reduce .* opt.smax ./ (2 .* pi .* gmax_vec .* ft + 1e-64);
         senv(senv>1) = 1;
         
         chirp = senv .* Gct;
@@ -178,6 +196,11 @@ function chirp = get_chirp(varargin)
     slew_check = diff(chirp)./opt.dt;
     if max(abs(slew_check)) > opt.smax
         disp('ERROR: Chirp generation gave slew rate > smax.')
+        opt
+        figure()
+        plot(slew_check)
+        figure()
+        plot(chirp)
     end
 
 end

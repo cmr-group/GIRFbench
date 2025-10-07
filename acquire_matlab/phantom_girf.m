@@ -8,13 +8,10 @@ clc
 
 
 %%
-specs.MaxGrad = 32;
-specs.MaxSlew = 110;
-
 TR = 500e-3;
 N_av = 4;
 
-params = PSeq_Params(specs);
+params = PSeq_Params('max_grad', 32, 'max_slew', 110);
 
 pseq0 = PSeq_Base(params);
 
@@ -83,7 +80,7 @@ fprintf('Sequence Duration: %s \n', seq_duration)
 
 % ----------
 pseq0.seq.setDefinition('FOV', [320e-3 320e-3 FOVz]);
-pseq0.seq.setDefinition('Name', 'temp_GIRF');
+pseq0.seq.setDefinition('Name', 'phantom_girf');
 pseq0.seq.setDefinition('MaxAdcSegmentLength', pseq_test.adc_samples_per_segment);
 
 pseq0.seq.write('export/phantom_girf.seq');   % Output sequence for scanner

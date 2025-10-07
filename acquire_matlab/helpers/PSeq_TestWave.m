@@ -50,6 +50,8 @@ classdef PSeq_TestWave < PSeq_Base
             obj = obj@PSeq_Base(pparams);
 
             p = inputParser;
+            p.KeepUnmatched=true;  % Allows for passthrough inhereted options to base class
+
             addParameter(p, 'do_adc', true);
             addParameter(p, 'dt_adc', 4e-6);
             addParameter(p, 'N_adc', 20000);
