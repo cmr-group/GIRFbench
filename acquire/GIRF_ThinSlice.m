@@ -72,7 +72,7 @@ all_waves{end+1} = get_bipolar('dt', dt, 't_lobe', 1.0e-3,...
 % PSeq_GIRFGeneral is a helper class that handles almost all of the GIRF measurement, check the function
 % docstring to see all of the options that are supported
 
-pseq_girf = PSeq_GIRFGeneral(params, 'test_waves_in', all_waves, 'excite_mode', 'Thin', 'do_adc', false);
+pseq_girf = PSeq_GIRFGeneral(params, 'test_waves_in', all_waves, 'excite_mode', 'Thin');
 
 %%
 
